@@ -38,11 +38,11 @@ def lc_request(query, variables: dict | None = None):
 
 # SIGNING IN
 login_query = '{ userStatus { username isSignedIn } }'
-userData = lc_request(login_query)
-userStatus = userData['userStatus']
-for status in userStatus:
-    print(userStatus[status])
-if not userStatus['isSignedIn']:
+user_data = lc_request(login_query)
+user_info = user_data['userStatus']
+for status in user_info:
+    print(user_info[status])
+if not user_info['isSignedIn']:
     sys.exit('SIGN IN UNSUCCESSFUL ❌. COOKIES HAVE GONE STALE. GET FRESH ONES.')
 
 
@@ -60,11 +60,13 @@ page_query = '''query ($offset: Int!, $limit: Int!) {
 hasNext = True
 while hasNext:
     page_vars = {'offset': offset, 'limit': PAGE_SIZE}
-    pageData = lc_request(page_query, page_vars)
-    submission_list = pageData['submissionList']
-    all_submissions.extend(submission_list['submissions'])
+    page_data = lc_request(page_query, page_vars) # so page_data contains only one key, submissionList
+    page_info = page_data['submissionList']
+    # so page_info contains three keys: hasNext, lastKey and submissions (which is a
+    # list of dictionaries, and each dictionary has the five keys listed in page_query)
+    all_submissions.extend(page_info['submissions'])
     offset += PAGE_SIZE
-    hasNext = submission_list['hasNext']
+    hasNext = page_info['hasNext']
     time.sleep(1)
 
 newest_submissions = {}
@@ -72,12 +74,26 @@ for submission in all_submissions:
     if submission['statusDisplay'] != 'Accepted':
         continue
     if submission['titleSlug'] not in newest_submissions:
-        newest_submissions[submission['titleSlug']] = submission
-print(len(all_submissions))
-print(len(newest_submissions))
-for submission in newest_submissions:
-    print(submission)
+        newest_submissions[submission['titleSlug']] = submission 
+# by the end of this loop every entry in newest_submissions should have a
+# title slug as a key, and the submission associated with that slug as a value
 
 
+
+# GETTING SUBMISSION DETAILS
+sub_query = '''query ($id: Int!) {
+                    submissionDetails(submissionId: $id) {
+                        code
+                        question { questionFrontendId }
+                    }
+                }'''
+for submission in newest_submissions.values():
+    sub_var = {'id': int(submission['id'])}
+    lc_submission_info = lc_request(sub_query, sub_var) # contains only one key
+    lc_submission_data = lc_submission_info['submissionDetails'] # contains two keys, code and question
+    lc_question_info = lc_submission_data['question'] 
+    submission['my_code'] = lc_submission_data['code']
+    submission['question_number'] = lc_question_info['questionFrontendId']
+    print(f" Question #{submission['question_number']}, {submission['titleSlug']} added!")
 
 
