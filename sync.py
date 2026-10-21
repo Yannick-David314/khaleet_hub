@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import time
@@ -5,6 +6,7 @@ import time
 from dotenv import load_dotenv
 import requests
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LANG_EXT_REF = {
     'c': 'c',
     'cpp': 'cpp',
@@ -33,7 +35,8 @@ LANG_EXT_REF = {
     'bash': 'sh',
 }
 PAGE_SIZE = 20
-SOLUTIONS_DIR = 'solutions'
+SOLUTIONS_DIR = os.path.join(BASE_DIR, 'solutions')
+SYNCED_PROBLEMS_FILE = os.path.join(BASE_DIR, 'synced.json')
 
 
 
@@ -45,6 +48,16 @@ if not lc_session or not csrf:
     sys.exit('COOKIES MISSING FROM .env JAR 👎.')
 else:
     print('Loaded OK 👍!')
+
+
+
+# LOADING DONE PROBLEMS
+try:
+    with open(SYNCED_PROBLEMS_FILE, 'r', encoding='utf-8') as seen:
+        synced = json.load(seen)       
+except FileNotFoundError:
+    synced = {}
+print(synced)
 
 
 
@@ -116,6 +129,9 @@ sub_query = '''query ($id: Int!) {
                     }
                 }'''
 for submission in newest_submissions.values():
+    if submission['id'] == synced.get(submission['titleSlug']):
+        print(f"Skipping {submission['titleSlug']}")
+        continue
     sub_var = {'id': int(submission['id'])}
     lc_submission_details = lc_request(sub_query, sub_var) # lc_submission_details contains only one key
     lc_submission_data = lc_submission_details['submissionDetails'] # lc_submission_data contains two keys: code and question
@@ -129,6 +145,8 @@ for submission in newest_submissions.values():
 
 # WRITING SOLUTIONS TO FILE
 for submission in newest_submissions.values():
+    if not submission.get('my_code'):
+        continue
     file_extension = LANG_EXT_REF.get(submission['lang'], 'txt')
     folder_name = f"{submission['question_number'].zfill(4)}-{submission['titleSlug']}"
     folder_path = os.path.join(SOLUTIONS_DIR, folder_name)
@@ -136,11 +154,12 @@ for submission in newest_submissions.values():
     os.makedirs(folder_path, exist_ok=True)
     with open(file_path, 'w', encoding='utf-8') as file:
         file.write(submission['my_code'])
+    synced[submission['titleSlug']] = submission['id']
     print(f"Wrote {file_path}.")
-    
 
 
 
-
-
-
+# SAVING DONE PROBLEMS
+with open(SYNCED_PROBLEMS_FILE, 'w', encoding='utf-8') as seen:
+    json.dump(synced, seen, indent=2)       
+print(f"Saved {len(synced)} synced problems")
