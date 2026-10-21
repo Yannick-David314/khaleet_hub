@@ -127,6 +127,7 @@ for submission in newest_submissions.values():
 
 
 
+# WRITING SOLUTIONS TO FILE
 for submission in newest_submissions.values():
     file_extension = LANG_EXT_REF.get(submission['lang'], 'txt')
     folder_name = f"{submission['question_number'].zfill(4)}-{submission['titleSlug']}"
