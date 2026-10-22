@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-'/Users/khaligula/githubfiles/khaleet_hub/.venv/bin/python' '/Users/khaligula/githubfiles/khaleet_hub/sync.py'
+cd "$(dirname "$0")" || exit 1
+'.venv/bin/python' './sync.py'
 if [ "$?" -ne 0 ]; then # this line checks if the exit code from syncing was not 0: if it failed, in short
     echo 'Sync failed. Not committing'
     exit 1

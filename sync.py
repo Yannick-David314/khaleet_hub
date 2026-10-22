@@ -57,7 +57,7 @@ try:
         synced = json.load(seen)       
 except FileNotFoundError:
     synced = {}
-print(synced)
+print(f"{len(synced)} problems already synced")
 
 
 
